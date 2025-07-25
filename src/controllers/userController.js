@@ -4,7 +4,9 @@ import {
   createUserService,
   updateUserService,
   deleteUserService,
+  loginUserService,
 } from "../models/userModel.js";
+import { generateToken } from "../middlewares/authentication.js";
 
 // Standardized response function
 const handleResponse = (res, status, success, data, message) => {
@@ -25,6 +27,36 @@ export const createUser = async (req, res, next) => {
   }
 };
 
+
+export const loginUser = async (req, res, next) => {
+  const { staff_name, password } = req.body;
+  try {
+    const user = await loginUserService(staff_name, password);
+    
+    if (!user) {
+      return handleResponse(res, 401, false, null, "Invalid credentials");
+    }
+    
+    
+    const token = generateToken({
+      userId: user.staff_id,
+      staff_name: user.staff_name,
+      role_id: user.role_id
+    });
+    
+    handleResponse(res, 200, true, { 
+      user: {
+        staff_id: user.staff_id,
+        staff_name: user.staff_name,
+        role_id: user.role_id
+      },
+      token 
+    }, "Login successful");
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await getAllUsersService();
@@ -36,7 +68,7 @@ export const getAllUsers = async (req, res, next) => {
 
 export const getUserById = async (req, res, next) => {
   try {
-    const user = await getUserByIdService(req.params.id); // Changed from staff_id to id
+    const user = await getUserByIdService(req.params.id); 
     if (!user) {
       return handleResponse(res, 404, false, null, "User not found");
     }
@@ -50,8 +82,8 @@ export const updateUser = async (req, res, next) => {
   try {
     const { staff_name, password, role_id } = req.body;
     const updatedUser = await updateUserService(
-      req.params.id, // Changed from staff_id to id
-      { staff_name, password, role_id } // Pass as object
+      req.params.id, 
+      { staff_name, password, role_id } 
     );
     if (!updatedUser) {
       return handleResponse(res, 404, false, null, "User not found");
@@ -64,7 +96,7 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const deletedUser = await deleteUserService(req.params.id); // Changed from staff_id to id
+    const deletedUser = await deleteUserService(req.params.id); 
     if (!deletedUser) {
       return handleResponse(res, 404, false, null, "User not found");
     }

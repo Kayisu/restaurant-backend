@@ -11,6 +11,17 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+// JWT configuration
+export const jwtSecret = process.env.JWT_SECRET;
+export const jwtExpiration = process.env.JWT_EXPIRATION || '24h';
+
+// Auth config object
+export const authConfig = {
+  jwtSecret,
+  jwtExpiration,
+  tokenHeader: 'authorization'
+};
+
 pool.on("connect", () => {
   console.log("Connection pool established with the database");
 });
