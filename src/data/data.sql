@@ -1,0 +1,3 @@
+--this project is built by using database first approach.
+-- So I'm too lazy to transform it to code first
+-- But I will share the sql creation and insertion scripts, your welcome.
