@@ -27,34 +27,49 @@ export const createUser = async (req, res, next) => {
   }
 };
 
-
 export const loginUser = async (req, res, next) => {
   const { staff_name, password } = req.body;
   try {
     const user = await loginUserService(staff_name, password);
-    
+
     if (!user) {
       return handleResponse(res, 401, false, null, "Invalid credentials");
     }
-    
-    
+
     const token = generateToken({
       userId: user.staff_id,
       staff_name: user.staff_name,
-      role_id: user.role_id
+      role_id: user.role_id,
     });
-    
-    handleResponse(res, 200, true, { 
-      user: {
-        staff_id: user.staff_id,
-        staff_name: user.staff_name,
-        role_id: user.role_id
+
+    res.cookie("token", token, {
+      httpOnly: false, // Only accessible by the web server
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      sameSite: "Strict", // Prevent CSRF attacks
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
+
+    handleResponse(
+      res,
+      200,
+      true,
+      {
+        user: {
+          staff_id: user.staff_id,
+          staff_name: user.staff_name,
+          role_id: user.role_id,
+        },
       },
-      token 
-    }, "Login successful");
+      "Login successful"
+    );
   } catch (err) {
     next(err);
   }
+};
+
+export const logoutUser = (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ message: "Logged out" });
 };
 
 export const getAllUsers = async (req, res, next) => {
@@ -68,7 +83,7 @@ export const getAllUsers = async (req, res, next) => {
 
 export const getUserById = async (req, res, next) => {
   try {
-    const user = await getUserByIdService(req.params.id); 
+    const user = await getUserByIdService(req.params.id);
     if (!user) {
       return handleResponse(res, 404, false, null, "User not found");
     }
@@ -81,10 +96,11 @@ export const getUserById = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
   try {
     const { staff_name, password, role_id } = req.body;
-    const updatedUser = await updateUserService(
-      req.params.id, 
-      { staff_name, password, role_id } 
-    );
+    const updatedUser = await updateUserService(req.params.id, {
+      staff_name,
+      password,
+      role_id,
+    });
     if (!updatedUser) {
       return handleResponse(res, 404, false, null, "User not found");
     }
@@ -96,7 +112,7 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const deletedUser = await deleteUserService(req.params.id); 
+    const deletedUser = await deleteUserService(req.params.id);
     if (!deletedUser) {
       return handleResponse(res, 404, false, null, "User not found");
     }

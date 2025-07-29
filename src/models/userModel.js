@@ -9,7 +9,7 @@ export const getAllUsersService = async () => {
       s.role_id, 
       r.role_name 
     FROM staff s 
-    JOIN role r ON s.role_id = r.role_id
+    JOIN roles r ON s.role_id = r.role_id
   `);
   return result.rows;
 };
@@ -63,7 +63,7 @@ export const loginUserService = async (staff_name, password) => {
       s.role_id, 
       r.role_name 
     FROM staff s 
-    JOIN role r ON s.role_id = r.role_id 
+    JOIN roles r ON s.role_id = r.role_id 
     WHERE s.staff_name = $1
   `,
     [staff_name]
