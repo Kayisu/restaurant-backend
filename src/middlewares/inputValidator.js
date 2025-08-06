@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 const userScheme = Joi.object({
-  staff_name: Joi.string().min(3).max(50).required(),
+  user_name: Joi.string().min(3).max(50).required(),
   password: Joi.string().min(6).max(50).required(), 
   role_id: Joi.number().integer().min(1).required(),
   email: Joi.string().email().optional().allow(null, ''),
@@ -9,27 +9,27 @@ const userScheme = Joi.object({
 });
 
 const loginScheme = Joi.object({
-  staff_name: Joi.string().min(3).max(50).required(),
+  user_name: Joi.string().min(3).max(50).required(),
   password: Joi.string().min(6).max(50).required()
 });
 
-// Schema for updating own credentials (requires current password)
 const updateOwnCredentialsScheme = Joi.object({
   current_password: Joi.string().min(6).max(50).required(),
   new_password: Joi.string().min(6).max(50).optional(),
+  user_name: Joi.string().min(3).max(50).optional(),
   staff_name: Joi.string().min(3).max(50).optional(),
   email: Joi.string().email().optional().allow(null, ''),
   phone: Joi.string().optional().allow(null, '')
-}).min(2); // At least current_password and one field to update
+}).min(2);
 
-// Schema for admin updating any user's credentials (no current password needed)
 const adminUpdateCredentialsScheme = Joi.object({
+  user_name: Joi.string().min(3).max(50).optional(),
   staff_name: Joi.string().min(3).max(50).optional(),
   password: Joi.string().min(6).max(50).optional(),
   role_id: Joi.number().integer().min(1).optional(),
   email: Joi.string().email().optional().allow(null, ''),
   phone: Joi.string().optional().allow(null, '')
-}).min(1); // At least one field to update
+}).min(1);
 
 const validateUser = (req, res, next) => {
   const { error } = userScheme.validate(req.body);
@@ -81,4 +81,3 @@ export {
   validateUpdateOwnCredentials, 
   validateAdminUpdateCredentials 
 };
-// This middleware validates the user input for creating or updating a user.

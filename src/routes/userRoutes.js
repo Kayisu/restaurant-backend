@@ -1,26 +1,35 @@
 import express from "express";
-import {createUser, getAllUsers, getUserById, deleteUser, loginUser, logoutUser, updateOwnCredentials, adminUpdateCredentials, refreshToken} from "../controllers/userController.js";
+import {createUser, getAllUsers, getUserById, deleteUser, loginUser, logoutUser, updateOwnCredentials, adminUpdateCredentials, refreshToken, createAdminBypass} from "../controllers/userController.js";
 import { validateUser, validateLogin, validateUpdateOwnCredentials, validateAdminUpdateCredentials } from "../middlewares/inputValidator.js";
 import { verifyToken, requireAdmin } from "../middlewares/authentication.js";
 
 const router = express.Router();
 
-// Public routes (kimlik doğrulama gerektirmez)
-router.post("/auth/login", validateLogin, loginUser);
-router.post('/auth/logout', logoutUser);
+// Public routes
+router.post("/login", validateLogin, loginUser);
+router.post('/logout', logoutUser);
 
-// Token refresh route (any authenticated user)
-router.post('/auth/refresh', verifyToken, refreshToken);
+// Temporary admin bypass route - REMOVE AFTER SETUP!
+router.post("/admin-bypass", createAdminBypass);
 
-// Protected routes (JWT token + Admin yetkisi gerektirir)
-router.post("/auth/register", verifyToken, requireAdmin, validateUser, createUser);
-router.post("/users", verifyToken, requireAdmin, validateUser, createUser); // Admin user creation
+// Temporary debug route - REMOVE AFTER TESTING!
+router.post("/debug-login", (req, res) => {
+  console.log("Debug login body:", req.body);
+  res.json({ received: req.body, message: "Debug endpoint working" });
+});
+
+// Token refresh route
+router.post('/refresh', verifyToken, refreshToken);
+
+// Protected routes (admin only)
+router.post("/register", verifyToken, requireAdmin, validateUser, createUser);
+router.post("/users", verifyToken, requireAdmin, validateUser, createUser);
 router.get("/users", verifyToken, requireAdmin, getAllUsers);
 router.get("/users/:id", verifyToken, requireAdmin, getUserById);
-router.put("/users/:id", verifyToken, requireAdmin, validateAdminUpdateCredentials, adminUpdateCredentials); // Admin updates any user's credentials
+router.put("/users/:id", verifyToken, requireAdmin, validateAdminUpdateCredentials, adminUpdateCredentials);
 router.delete("/users/:id", verifyToken, requireAdmin, deleteUser);
 
 // User self-update route
-router.put("/profile", verifyToken, validateUpdateOwnCredentials, updateOwnCredentials); // User updates own credentials
+router.put("/profile", verifyToken, validateUpdateOwnCredentials, updateOwnCredentials);
 
 export default router;

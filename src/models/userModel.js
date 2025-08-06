@@ -4,35 +4,35 @@ import bcrypt from "bcrypt";
 export const getAllUsersService = async () => {
   const result = await pool.query(`
     SELECT 
-      s.staff_id, 
-      s.staff_name, 
-      s.role_id, 
+      u.user_id, 
+      u.user_name, 
+      u.role_id, 
       r.role_name,
-      s.email,
-      s.phone,
-      s.created_at
-    FROM staff s 
-    JOIN roles r ON s.role_id = r.role_id
+      u.email,
+      u.phone,
+      u.created_at
+    FROM users u 
+    JOIN roles r ON u.role_id = r.role_id
   `);
   return result.rows;
 };
 
-export const getUserByIdService = async (staff_id) => {
+export const getUserByIdService = async (user_id) => {
   const result = await pool.query(
     `
     SELECT 
-      s.staff_id, 
-      s.staff_name, 
-      s.role_id, 
+      u.user_id, 
+      u.user_name, 
+      u.role_id, 
       r.role_name,
-      s.email,
-      s.phone,
-      s.created_at
-    FROM staff s 
-    JOIN roles r ON s.role_id = r.role_id 
-    WHERE s.staff_id = $1
+      u.email,
+      u.phone,
+      u.created_at
+    FROM users u 
+    JOIN roles r ON u.role_id = r.role_id 
+    WHERE u.user_id = $1
   `,
-    [staff_id]
+    [user_id]
   );
 
   return result.rows[0];
@@ -40,44 +40,43 @@ export const getUserByIdService = async (staff_id) => {
 
 export const createUserService = async (userData) => {
   const {
-    staff_name,
+    user_name,
     password,
     role_id,
     email = null,
     phone = null,
   } = userData;
 
-  // Şifreyi hash'le
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const result = await pool.query(
     `
-    INSERT INTO staff (staff_name, password, role_id, email, phone, created_at) 
+    INSERT INTO users (user_name, password, role_id, email, phone, created_at) 
     VALUES ($1, $2, $3, $4, $5, NOW()) 
-    RETURNING staff_id, staff_name, role_id, email, phone, created_at
+    RETURNING user_id, user_name, role_id, email, phone, created_at
   `,
-    [staff_name, hashedPassword, role_id, email, phone]
+    [user_name, hashedPassword, role_id, email, phone]
   );
   return result.rows[0];
 };
 
-export const loginUserService = async (staff_name, password) => {
+export const loginUserService = async (user_name, password) => {
   const result = await pool.query(
     `
     SELECT 
-      s.staff_id, 
-      s.staff_name, 
-      s.password,
-      s.role_id, 
+      u.user_id, 
+      u.user_name, 
+      u.password,
+      u.role_id, 
       r.role_name,
-      s.email,
-      s.phone,
-      s.created_at
-    FROM staff s 
-    JOIN roles r ON s.role_id = r.role_id 
-    WHERE s.staff_name = $1
+      u.email,
+      u.phone,
+      u.created_at
+    FROM users u 
+    JOIN roles r ON u.role_id = r.role_id 
+    WHERE u.user_name = $1
   `,
-    [staff_name]
+    [user_name]
   );
 
   if (result.rows.length === 0) {
@@ -96,38 +95,36 @@ export const loginUserService = async (staff_name, password) => {
   return userWithoutPassword;
 };
 
-export const updateUserService = async (staff_id, userData) => {
-  const { staff_name, password, role_id } = userData;
+export const updateUserService = async (user_id, userData) => {
+  const { user_name, password, role_id } = userData;
   const result = await pool.query(
     `
-    UPDATE staff
-    SET staff_name = $1, password = $2, role_id = $3
-    WHERE staff_id = $4
+    UPDATE users
+    SET user_name = $1, password = $2, role_id = $3
+    WHERE user_id = $4
     RETURNING *
   `,
-    [staff_name, password, role_id, staff_id]
+    [user_name, password, role_id, user_id]
   );
   return result.rows[0];
 };
 
-export const deleteUserService = async (staff_id) => {
+export const deleteUserService = async (user_id) => {
   const result = await pool.query(
     `
-        DELETE FROM staff 
-        WHERE staff_id = $1
+        DELETE FROM users 
+        WHERE user_id = $1
         RETURNING *
     `,
-    [staff_id]
+    [user_id]
   );
   return result.rows[0];
 };
 
-// Update own credentials (requires current password verification)
-export const updateOwnCredentialsService = async (staff_id, currentPassword, updates) => {
-  // First verify current password
+export const updateOwnCredentialsService = async (user_id, currentPassword, updates) => {
   const userResult = await pool.query(
-    'SELECT password FROM staff WHERE staff_id = $1',
-    [staff_id]
+    'SELECT password FROM users WHERE user_id = $1',
+    [user_id]
   );
 
   if (userResult.rows.length === 0) {
@@ -139,14 +136,13 @@ export const updateOwnCredentialsService = async (staff_id, currentPassword, upd
     throw new Error('Current password is incorrect');
   }
 
-  // Build dynamic update query
   const updateFields = [];
   const values = [];
   let paramCounter = 1;
 
-  if (updates.staff_name) {
-    updateFields.push(`staff_name = $${paramCounter++}`);
-    values.push(updates.staff_name);
+  if (updates.user_name || updates.staff_name) {
+    updateFields.push(`user_name = $${paramCounter++}`);
+    values.push(updates.user_name || updates.staff_name);
   }
 
   if (updates.new_password) {
@@ -166,29 +162,27 @@ export const updateOwnCredentialsService = async (staff_id, currentPassword, upd
   }
 
   updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(staff_id);
+  values.push(user_id);
 
   const query = `
-    UPDATE staff 
+    UPDATE users 
     SET ${updateFields.join(', ')}
-    WHERE staff_id = $${paramCounter}
-    RETURNING staff_id, staff_name, role_id, email, phone, updated_at
+    WHERE user_id = $${paramCounter}
+    RETURNING user_id, user_name, role_id, email, phone, updated_at
   `;
 
   const result = await pool.query(query, values);
   return result.rows[0];
 };
 
-// Admin update any user's credentials (no current password needed)
-export const adminUpdateCredentialsService = async (staff_id, updates) => {
-  // Build dynamic update query
+export const adminUpdateCredentialsService = async (user_id, updates) => {
   const updateFields = [];
   const values = [];
   let paramCounter = 1;
 
-  if (updates.staff_name) {
-    updateFields.push(`staff_name = $${paramCounter++}`);
-    values.push(updates.staff_name);
+  if (updates.user_name || updates.staff_name) {
+    updateFields.push(`user_name = $${paramCounter++}`);
+    values.push(updates.user_name || updates.staff_name);
   }
 
   if (updates.password) {
@@ -217,13 +211,13 @@ export const adminUpdateCredentialsService = async (staff_id, updates) => {
   }
 
   updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(staff_id);
+  values.push(user_id);
 
   const query = `
-    UPDATE staff 
+    UPDATE users 
     SET ${updateFields.join(', ')}
-    WHERE staff_id = $${paramCounter}
-    RETURNING staff_id, staff_name, role_id, email, phone, updated_at
+    WHERE user_id = $${paramCounter}
+    RETURNING user_id, user_name, role_id, email, phone, updated_at
   `;
 
   const result = await pool.query(query, values);

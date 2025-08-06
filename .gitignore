@@ -1,2 +1,4 @@
 .env
+login.json
+admin-bypass.json
 node_modules/

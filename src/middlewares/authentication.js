@@ -10,7 +10,7 @@ export const generateToken = (payload) => {
 
 export const verifyToken = (req, res, next) => {
   let token = req.cookies.token;
-  const authHeader = req.headers.authorization; // Add this line to declare authHeader
+  const authHeader = req.headers.authorization; 
 
   if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
