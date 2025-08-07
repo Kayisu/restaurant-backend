@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import pool from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import tableRoutes from './routes/tableRoutes.js';
-import translationRoutes from './routes/translationRoutes.js';
 import errorHandling from './middlewares/errorHandler.js';
 import cookieParser from 'cookie-parser';
 
@@ -23,7 +22,6 @@ app.use(cookieParser());
 app.use('/api/auth', userRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tables', tableRoutes);
-app.use('/api/translations', translationRoutes);
 
 app.use(errorHandling);
 

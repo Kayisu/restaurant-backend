@@ -1,5 +1,4 @@
 import pool from "../config/db.js";
-import { TranslationService, STATUS_COLORS } from "../services/translationService.js";
 
 export const getAllTables = async (req, res, next) => {
   try {
@@ -63,37 +62,13 @@ export const getTableSections = async (req, res, next) => {
 };
 
 export const getSectionSummary = async (req, res, next) => {
-  const { lang } = req.query;
-  const language = lang || TranslationService.getDefaultLanguage();
-
   try {
     const result = await pool.query('SELECT * FROM dashboard_section_summary');
     
-    const enhancedData = result.rows.map(section => {
-      const sectionInfo = TranslationService.getSectionInfo(section.section_code, language);
-      const statusText = TranslationService.getStatusText(section.section_status, language);
-      const statusColors = STATUS_COLORS[section.section_status] || STATUS_COLORS.quiet;
-      
-      return {
-        ...section,
-        section_name_localized: sectionInfo.name,
-        section_description: sectionInfo.description,
-        status_text: statusText,
-        status_color: statusColors.color,
-        status_icon: statusColors.icon,
-        language: language
-      };
-    });
-
     res.json({
       success: true,
       message: "Section summary retrieved successfully",
-      data: enhancedData,
-      meta: {
-        language: language,
-        supportedLanguages: TranslationService.getSupportedLanguages(),
-        defaultLanguage: TranslationService.getDefaultLanguage()
-      }
+      data: result.rows
     });
   } catch (error) {
     console.error('Error fetching section summary:', error);

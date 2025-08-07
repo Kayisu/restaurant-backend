@@ -23,11 +23,11 @@ router.post('/refresh', verifyToken, refreshToken);
 
 // Protected routes (admin only)
 router.post("/register", verifyToken, requireAdmin, validateUser, createUser);
-router.post("/users", verifyToken, requireAdmin, validateUser, createUser);
-router.get("/users", verifyToken, requireAdmin, getAllUsers);
-router.get("/users/:id", verifyToken, requireAdmin, getUserById);
-router.put("/users/:id", verifyToken, requireAdmin, validateAdminUpdateCredentials, adminUpdateCredentials);
-router.delete("/users/:id", verifyToken, requireAdmin, deleteUser);
+router.post("/", verifyToken, requireAdmin, validateUser, createUser);
+router.get("/", verifyToken, requireAdmin, getAllUsers);
+router.get("/:id", verifyToken, requireAdmin, getUserById);
+router.put("/:id", verifyToken, requireAdmin, validateAdminUpdateCredentials, adminUpdateCredentials);
+router.delete("/:id", verifyToken, requireAdmin, deleteUser);
 
 // User self-update route
 router.put("/profile", verifyToken, validateUpdateOwnCredentials, updateOwnCredentials);
