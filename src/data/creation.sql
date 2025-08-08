@@ -46,12 +46,13 @@ CREATE TABLE customers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. TABLES TABLE (Enhanced with occupied_since)
+-- 5. TABLES TABLE (Enhanced with occupied_since and is_reserved)
 CREATE TABLE tables (
   table_id VARCHAR(10) PRIMARY KEY,
   capacity INTEGER NOT NULL,
   location VARCHAR(100),
   is_occupied BOOLEAN DEFAULT false,
+  is_reserved BOOLEAN DEFAULT false,
   assigned_server INTEGER REFERENCES users(user_id),
   occupied_since TIMESTAMP, -- NEW: Track occupation time
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -242,6 +243,24 @@ CREATE TABLE reservations (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Sessions table to prevent multiple logins of the same account
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    token_hash VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    user_agent TEXT,
+    ip_address INET,
+    CONSTRAINT check_session_expiry CHECK (expires_at > created_at)
+);
+
+-- Index for faster session lookups
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active) WHERE is_active = true;
 
 -- =========================================
 -- TRIGGERS FOR AUTOMATIC updated_at

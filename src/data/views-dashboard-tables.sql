@@ -5,6 +5,7 @@ SELECT
   t.table_id,
   t.capacity,
   t.is_occupied,
+  t.is_reserved,
   t.assigned_server,
   t.occupied_since,
   t.created_at,
@@ -24,8 +25,18 @@ SELECT
   c.name as customer_name,
   c.phone_number as customer_phone,
 
-  -- Table status summary
+  -- Reservation information
+  r.reservation_id,
+  r.party_size as reserved_party_size,
+  r.reservation_date,
+  r.reservation_time,
+  r.status as reservation_status,
+  cust.name as reserved_customer_name,
+  cust.phone_number as reserved_customer_phone,
+
+  -- Enhanced table status summary
   CASE 
+    WHEN t.is_reserved = true THEN 'reserved'
     WHEN t.is_occupied = false THEN 'available'
     WHEN t.is_occupied = true AND o.status = 'pending' THEN 'ordering'
     WHEN t.is_occupied = true AND o.status = 'confirmed' THEN 'confirmed'
@@ -60,6 +71,10 @@ LEFT JOIN orders o ON t.table_id = o.table_id
     AND o2.status NOT IN ('completed', 'cancelled')
   )
 LEFT JOIN customers c ON o.customer_id = c.customer_id
+LEFT JOIN reservations r ON t.table_id = r.table_id 
+  AND r.reservation_date = CURRENT_DATE
+  AND r.status = 'confirmed'
+LEFT JOIN customers cust ON r.customer_id = cust.customer_id
 LEFT JOIN (
   SELECT 
     order_id, 
@@ -70,8 +85,12 @@ LEFT JOIN (
 ) oi ON o.order_id = oi.order_id
 
 ORDER BY 
-  -- First by occupancy status (available first)
-  CASE WHEN t.is_occupied THEN 0 ELSE 1 END,
+  -- First by status priority (available, reserved, occupied)
+  CASE 
+    WHEN t.is_reserved = true THEN 1
+    WHEN t.is_occupied = false THEN 0
+    ELSE 2
+  END,
   -- Then by table ID
   t.table_id;
 
@@ -79,14 +98,16 @@ ORDER BY
 CREATE OR REPLACE VIEW dashboard_stats AS
 SELECT 
   COUNT(*) as total_tables,
-  COUNT(*) FILTER (WHERE is_occupied = true) as occupied_tables,
-  COUNT(*) FILTER (WHERE is_occupied = false) as available_tables,
-  COUNT(*) FILTER (WHERE table_status = 'ordering') as ordering_tables,
-  COUNT(*) FILTER (WHERE table_status = 'preparing') as preparing_tables,
-  COUNT(*) FILTER (WHERE table_status = 'ready') as ready_tables,
-  COUNT(*) FILTER (WHERE table_status = 'served') as served_tables,
-  ROUND(AVG(occupied_duration_minutes)) as avg_occupation_time,
-  SUM(COALESCE(total_amount, 0)) as active_orders_total
-FROM dashboard_tables;
+  COUNT(*) FILTER (WHERE t.is_occupied = true) as occupied_tables,
+  COUNT(*) FILTER (WHERE t.is_reserved = true) as reserved_tables,
+  COUNT(*) FILTER (WHERE t.is_occupied = false AND t.is_reserved = false) as available_tables,
+  COUNT(*) FILTER (WHERE dt.table_status = 'ordering') as ordering_tables,
+  COUNT(*) FILTER (WHERE dt.table_status = 'preparing') as preparing_tables,
+  COUNT(*) FILTER (WHERE dt.table_status = 'ready') as ready_tables,
+  COUNT(*) FILTER (WHERE dt.table_status = 'served') as served_tables,
+  ROUND(AVG(dt.occupied_duration_minutes)) as avg_occupation_time,
+  SUM(COALESCE(dt.total_amount, 0)) as active_orders_total
+FROM tables t
+LEFT JOIN dashboard_tables dt ON t.table_id = dt.table_id;
 
 SELECT 'Dashboard views created successfully!' as status;

@@ -75,6 +75,58 @@ const validateAdminUpdateCredentials = (req, res, next) => {
   next();
 };
 
+// Table validation schemas
+const createTableSchema = Joi.object({
+  table_id: Joi.string()
+    .pattern(/^[A-Z]-[0-9]{2}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Table ID must be in format: A-01, B-02, etc.',
+      'any.required': 'Table ID is required'
+    }),
+  capacity: Joi.number()
+    .integer()
+    .min(1)
+    .max(20)
+    .required()
+    .messages({
+      'number.base': 'Capacity must be a number',
+      'number.integer': 'Capacity must be an integer',
+      'number.min': 'Capacity must be at least 1',
+      'number.max': 'Capacity cannot exceed 20',
+      'any.required': 'Capacity is required'
+    }),
+  location: Joi.string()
+    .max(100)
+    .optional()
+    .messages({
+      'string.max': 'Location cannot exceed 100 characters'
+    }),
+  assigned_server: Joi.number()
+    .integer()
+    .positive()
+    .optional()
+    .messages({
+      'number.base': 'Assigned server must be a number',
+      'number.integer': 'Assigned server must be an integer',
+      'number.positive': 'Assigned server must be a positive number'
+    })
+});
+
+// Table validation middleware
+export const validateCreateTable = (req, res, next) => {
+  const { error } = createTableSchema.validate(req.body);
+  
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message
+    });
+  }
+  
+  next();
+};
+
 export { 
   validateUser, 
   validateLogin, 
